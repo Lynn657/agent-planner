@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>任务规划 Agent · Agent Planner</title>
+<meta name="description" content="基于大模型 API 的多步骤任务规划 Agent，自动拆解任务、调度工具、汇总结果。" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div class="backdrop">
+  <span class="orb orb-a"></span>
+  <span class="orb orb-b"></span>
+  <span class="orb orb-c"></span>
+</div>
+
+<div class="app">
+  <!-- ============ 左侧导航（参考图一） ============ -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">◈</div>
+      <div class="brand-text">
+        <strong>任务规划 Agent</strong>
+        <span>Agent Planner</span>
+      </div>
+    </div>
+
+    <nav class="nav" id="sideNav">
+      <button class="nav-item active" data-panel="workspace">
+        <span class="nav-dot"></span>首页
+      </button>
+      <button class="nav-item" data-panel="tools">工具体系</button>
+      <button class="nav-item" data-panel="history">运行记录</button>
+      <button class="nav-item" data-panel="about">关于项目</button>
+    </nav>
+
+    <div class="promo-card">
+      <span class="promo-badge">LOCAL</span>
+      <strong>本地可复现</strong>
+      <p>单元测试全离线，不消耗真实模型费用</p>
+      <button class="promo-btn" data-panel="about">查看说明 →</button>
+    </div>
+
+    <div class="sidebar-foot">帮助与反馈 →</div>
+  </aside>
+
+  <!-- ============ 主区域 ============ -->
+  <main class="main">
+    <header class="topbar">
+      <div class="headline">
+        <h1>规划一下，高效执行</h1>
+        <p>把复杂请求拆成可执行步骤，自动调度工具完成</p>
+      </div>
+      <div class="top-actions">
+        <span class="status-pill" id="statusPill"><i></i>检测中</span>
+        <a class="ghost-btn" href="http://127.0.0.1:8000/health" target="_blank" rel="noopener">接口文档</a>
+      </div>
+    </header>
+
+    <!-- tab 胶囊切换（参考图二） -->
+    <div class="tab-switch" id="tabSwitch">
+      <button class="tab-pill active" data-panel="workspace">任务规划</button>
+      <button class="tab-pill" data-panel="tools">工具体系</button>
+      <button class="tab-pill" data-panel="history">运行记录</button>
+    </div>
+
+    <!-- ---------- 面板：任务规划 ---------- -->
+    <section class="panel active" id="panel-workspace">
+      <div class="feature-grid">
+        <div class="feature-card grad-blue">
+          <span class="feature-icon">◇</span>
+          <strong>多步骤规划</strong>
+          <small>复杂请求自动拆解为可执行子任务</small>
+        </div>
+        <div class="feature-card grad-mint">
+          <span class="feature-icon">⌘</span>
+          <strong>工具调度</strong>
+          <small>Function Calling 式工具描述与入参校验</small>
+        </div>
+        <div class="feature-card grad-violet">
+          <span class="feature-icon">◌</span>
+          <strong>上下文复用</strong>
+          <small>逐步记录观察，支持跨步骤结果引用</small>
+        </div>
+      </div>
+
+      <div class="composer" id="composer">
+        <textarea
+          id="queryInput"
+          rows="3"
+          placeholder="描述你的任务，例如：帮我算 356*18，把结果记到备忘里，键名用 product"
+        ></textarea>
+        <div class="composer-bar">
+          <div class="composer-tools">
+            <button class="chip-btn" id="fillSample">+ 示例</button>
+            <button class="chip-btn" id="clearBtn">清空</button>
+            <span class="enter-hint">Ctrl + Enter 发送</span>
+          </div>
+          <button class="send-btn" id="sendBtn" aria-label="发送任务">
+            <span class="send-icon">↑</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <h3>快速开始</h3>
+        <span>点击卡片填入，一键运行</span>
+      </div>
+      <div class="sample-grid" id="sampleGrid"></div>
+
+      <div class="result-wrap" id="resultWrap" hidden>
+        <div class="section-head">
+          <h3>执行时间线</h3>
+          <span id="stepSummary"></span>
+        </div>
+        <div class="timeline" id="timeline"></div>
+        <div class="answer-card" id="answerCard">
+          <div class="answer-label">最终答复</div>
+          <p id="answerText"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- 面板：工具体系 ---------- -->
+    <section class="panel" id="panel-tools">
+      <div class="section-head">
+        <h3>工具体系</h3>
+        <span>由后端 <code>/api/tools</code> 实时返回</span>
+      </div>
+      <div class="tool-grid" id="toolGrid"></div>
+    </section>
+
+    <!-- ---------- 面板：运行记录 ---------- -->
+    <section class="panel" id="panel-history">
+      <div class="section-head">
+        <h3>运行记录</h3>
+        <span>仅保存在本机浏览器</span>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </section>
+
+    <!-- ---------- 面板：关于 ---------- -->
+    <section class="panel" id="panel-about">
+      <div class="about-card">
+        <h3>关于本项目</h3>
+        <p>这是一个前后端分离的多步骤任务规划 Agent：后端 Flask 提供 REST 接口，前端为独立静态站点，通过 CORS 跨域调用。</p>
+        <ul>
+          <li>后端：规划模块 → 执行器 → 上下文 → 汇总，全流程可测</li>
+          <li>工具：计算器、时间查询、本地模拟检索、备忘读写</li>
+          <li>测试：<code>pytest</code> 全离线运行，不产生真实模型请求</li>
+        </ul>
+        <p class="about-tip">启动：<code>cd backend &amp;&amp; flask --app app run --port 8000</code>，浏览器打开 <code>http://127.0.0.1:8000</code>。</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

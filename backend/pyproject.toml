@@ -1,0 +1,5 @@
+[tool.pytest.ini_options]
+# 让 pytest 能以 backend 目录为根导入 agent_planner 包与 app 模块
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"
