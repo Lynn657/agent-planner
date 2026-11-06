@@ -56,7 +56,14 @@ class OpenAICompatibleLLM(BaseLLM):
             },
             timeout=self.timeout,
         )
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except requests.HTTPError as exc:
+            # 上游错误(401 认证失败 / 404 模型不存在等)统一转 RuntimeError,
+            # 由 Flask 层返回 503 与可读信息, 避免裸 500
+            raise RuntimeError(
+                f"模型接口调用失败(HTTP {resp.status_code}): {resp.text[:500]}"
+            ) from exc
         data: dict[str, Any] = resp.json()
         try:
             return data["choices"][0]["message"]["content"]
