@@ -2,7 +2,7 @@
 # 适配 Python 3.9+（Windows / macOS / Linux 通用）
 pydantic>=2.5,<3        # 数据结构校验 + JSON Schema（工具参数定义）
 requests>=2.28          # 调用 OpenAI 兼容接口
-flask>=2.2              # REST 网关与静态前端托管
+flask>=2.3              # REST 网关与静态前端托管（app.json.ensure_ascii 需 2.3+）
 python-dotenv>=1.0      # 读取 .env 配置文件
 
 # Windows 没有系统时区数据库，zoneinfo 依赖 tzdata 包
