@@ -36,12 +36,16 @@ if not exist "backend\.venv" (
     echo [2/4] 已存在虚拟环境，跳过创建。
 )
 
-echo [3/4] 安装依赖（使用清华镜像加速）...
+echo [3/4] 安装依赖（优先清华镜像，失败自动换官方源）...
 call backend\.venv\Scripts\activate.bat
 python -m pip install --upgrade pip -q -i https://pypi.tuna.tsinghua.edu.cn/simple
 pip install -q -r backend\requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 if errorlevel 1 (
-    echo [错误] 依赖安装失败，请检查网络后重试。
+    echo [提示] 镜像源安装失败，改用官方源重试...
+    pip install -q -r backend\requirements.txt
+)
+if errorlevel 1 (
+    echo [错误] 依赖安装失败，请检查网络或代理设置后重试。
     pause
     exit /b 1
 )
