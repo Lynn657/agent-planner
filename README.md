@@ -3,13 +3,13 @@
 [![CI](https://github.com/USERNAME/agent-planner/actions/workflows/ci.yml/badge.svg)](https://github.com/USERNAME/agent-planner/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-54%20passed-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-61%20passed-brightgreen)]()
 
 基于大模型 API 的**多步骤任务规划 Agent**：把一句自然语言请求拆解成可执行的子任务序列，按序调用工具、维护上下文，最后汇总成自然语言答复。
 
 前后端分离：后端 Flask 提供 REST 接口，前端为独立静态站点（无构建步骤），通过 CORS 跨域调用。
 
-> 本项目是学习实践项目，重点在**工程可运行性与可测试性**：全部 54 个单元测试离线通过，不需要真实模型密钥、不产生 API 费用。
+> 本项目是学习实践项目，重点在**工程可运行性与可测试性**：全部 61 个单元测试离线通过，不需要真实模型密钥、不产生 API 费用。
 >
 > 徽章里的 `USERNAME` 是占位符，推送仓库后替换成你的 GitHub 用户名即可正常显示 CI 状态。
 
@@ -25,6 +25,7 @@
 - [运行测试](#运行测试)
 - [项目结构](#项目结构)
 - [设计说明](#设计说明)
+- [技术笔记](docs/技术笔记-Agent任务规划调研.md)
 - [常见问题](#常见问题)
 
 ---
@@ -39,6 +40,7 @@
 | 容错重试 | 规划解析失败自动带错误反馈重试；工具失败按上限重试并记录 |
 | 步数上限 | `max_steps` 防止模型规划出循环/超长任务 |
 | 汇总降级 | 汇总调用失败时自动退回规则拼接，保证链路不中断 |
+| 歧义澄清 | 模型判断无需调用工具时返回可执行的澄清提示，而不是"未执行任何工具" |
 | 离线可测 | `ScriptedLLM` 假模型驱动全部测试，无需网络与密钥 |
 | 前后端分离 | 前端纯静态（HTML/CSS/JS），可独立部署；后端统一开放 CORS |
 
@@ -129,6 +131,13 @@ python demo_server.py
 ```
 
 `demo_server.py` 使用规则型假模型（`OfflineDemoLLM`），无需密钥即可演示「规划 → 执行 → 时间线」全流程，适合本地验收与录屏。
+
+不想开网页、只想在终端看效果：
+
+```powershell
+cd backend
+python examples\run_offline.py
+```
 
 ---
 
@@ -224,10 +233,12 @@ python -m pytest -v
 或双击根目录 **`run-tests.bat`**。
 
 ```
-54 passed in 0.67s
+61 passed in 0.44s
 ```
 
-测试覆盖：工具参数校验与安全边界、JSON 提取与重试、执行器重试次数、Agent 多步骤/部分失败/步数截断、REST 接口与 CORS、静态页面托管。
+测试覆盖：工具参数校验与安全边界、JSON 提取与重试、执行器重试次数、Agent 多步骤/部分失败/步数截断、**歧义输入澄清**、REST 接口与 CORS、静态页面托管。
+
+按文件统计：`test_tools.py` 20 · `test_planner.py` 12 · `test_ambiguity.py` 7 · `test_api.py` 9 · `test_agent.py` 8 · `test_executor.py` 5。
 
 CI（GitHub Actions）在 Python 3.9 / 3.10 / 3.12 三个版本上跑同一套测试。
 
@@ -256,7 +267,11 @@ agent-planner/
 │   │   ├── config.py           # .env 与环境变量
 │   │   ├── errors.py
 │   │   └── tools/              # calculator / clock / search / memo
-│   └── tests/                  # pytest（5 个测试文件）
+│   ├── examples/
+│   │   └── run_offline.py      # 命令行演示（无需密钥）
+│   └── tests/                  # pytest（6 个测试文件，61 个用例）
+├── docs/
+│   └── 技术笔记-Agent任务规划调研.md   # 方案对比与选型记录
 ├── .github/workflows/ci.yml
 ├── .env.example
 ├── start.bat                   # Windows 一键启动
@@ -274,6 +289,10 @@ agent-planner/
 3. **为什么规划失败要重试**：小模型常输出夹带解释文字或格式不稳定的 JSON；把错误信息作为反馈重新请求，比直接失败更贴近真实工程做法。
 4. **为什么汇总要降级**：汇总结算失败不应让整条链路作废，规则拼接虽不优雅但保证可用性。
 5. **为什么计算器不用 eval**：表达式来自模型输出，等同不可信输入；AST 白名单求值可避免任意代码执行。
+6. **为什么空计划返回澄清提示**：模型判不出该调哪个工具时，"未执行任何工具"对用户毫无信息量；改为给出可操作的补充建议，也避免冒充"已完成"。
+
+更完整的方案对比（ReAct / Plan-and-Execute / Reflexion / Tree of Thoughts 等）与选型理由，见
+[docs/技术笔记-Agent任务规划调研.md](docs/技术笔记-Agent任务规划调研.md)。
 
 ---
 

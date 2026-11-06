@@ -26,6 +26,13 @@ _SUMMARY_SYSTEM = (
     "3. 不要输出 JSON。"
 )
 
+# 模型判断"无需调用工具"时的兜底提示: 不让用户收到"未执行任何工具"这种无用回答
+_CLARIFY_ANSWER = (
+    "这条请求里没有识别出需要调用工具的部分。"
+    "请补充更具体的信息, 例如要计算的表达式、要查询的时区、要检索的关键词, "
+    "或要写入备忘的键和值。"
+)
+
 
 class AgentResult(BaseModel):
     """一次完整运行的返回结果。"""
@@ -84,11 +91,7 @@ class Agent:
             record = self.executor.execute(task, index)
             context.add_step(record)
 
-        answer = (
-            self._summarize_answer(query, context)
-            if self.summarize and context.steps
-            else self._fallback_answer(context)
-        )
+        answer = self._build_answer(query, context, has_tasks=bool(scheduled))
 
         success = context.all_succeeded() if context.steps else True
         return AgentResult(
@@ -98,6 +101,19 @@ class Agent:
             answer=answer,
             success=success,
         )
+
+    def _build_answer(
+        self,
+        query: str,
+        context: ExecutionContext,
+        has_tasks: bool,
+    ) -> str:
+        """按场景选择答复方式: 空计划给澄清提示, 否则走模型汇总或规则拼接。"""
+        if not has_tasks:
+            return _CLARIFY_ANSWER
+        if self.summarize:
+            return self._summarize_answer(query, context)
+        return self._fallback_answer(context)
 
     def _summarize_answer(self, query: str, context: ExecutionContext) -> str:
         """调用模型把执行记录汇总成自然语言。模型异常时降级为规则拼接。"""
